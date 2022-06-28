@@ -2,14 +2,26 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:pokedex/common/models/pokemon.dart';
-import 'package:pokedex/features/pokedex/screens/home/pages/widgets/pokemon_item_widget.dart';
-import '../../details/container/detail_container.dart';
+import 'package:pokedex/features/pokedex/screens/details/container/detail_container.dart';
+import '../../details/pages/detail_page.dart';
 
 class PesquisaPage extends SearchDelegate<String> {
   late final Dio dio;
+  late final onBack;
+  late final controller;
+  late final onChangePokemon;
+  late ScrollController scrollController;
+
+  void initState() {
+    onBack = VoidCallback ;
+    controller = PageController;
+    onChangePokemon = ValueChanged<Pokemon>;
+    scrollController = ScrollController();
+  }
 
   @override
   String get searchFieldLabel => 'Nome, Tipo ou Raridade';
+
 
   @override
   List<Widget>? buildActions(BuildContext context) {
@@ -35,36 +47,30 @@ class PesquisaPage extends SearchDelegate<String> {
 
   @override
   Widget buildResults(BuildContext context) {
-    // TODO: implement buildResults
-    return FutureBuilder<Map<String, dynamic>>(
+      // TODO: implement buildResults
+      return FutureBuilder<List<Pokemon>>(
         future: resultado(query),
         builder: (context, snapshot){
-          if(snapshot.hasData){
-            return ListView(
-              children: [
-                Image.network(snapshot.data!['img']),
-                Padding(padding: EdgeInsets.all(12),
-                child: Column(
-                  children:[
-                    Row(
-                      children: [
-                        Text(snapshot.data!['name'], style: TextStyle(fontWeight: FontWeight.bold),),
-                        Text(snapshot.data!['id'])
-                      ],
-                    ),
-                    Text(snapshot.data!['name']),
-                  ]
-                ))
-              ],
-            );
+          if(snapshot.hasData) {
+            var n = int.parse(query) - 1;
+
+
+            print(onBack);
+            print(controller);
+            print(onChangePokemon);
+            return DetailPage(pokemon: snapshot.data![n], list: snapshot.data!, onBack: onBack, controller: controller, onChangePokemon: onChangePokemon);
           }else if(snapshot.hasError){
+            print(snapshot.data);
+            print(snapshot.error);
             return Center(child: Text('Erro ao escolher'),);
           }
           return Center(
             child: CircularProgressIndicator(),
           );
-        });
-  }
+        },);
+    }
+
+
 
   @override
   Widget buildSuggestions(BuildContext context) {
@@ -86,7 +92,7 @@ class PesquisaPage extends SearchDelegate<String> {
                     snapshot.data![index].type.contains(query) ||
                     snapshot.data![index].pTipo.contains(query) ||
                     snapshot.data![index].rarity.contains(query)){
-                  
+
                   exibiu++;
                   return ListTile(
                     leading: Image.network(snapshot.data![index].image),
@@ -125,12 +131,14 @@ class PesquisaPage extends SearchDelegate<String> {
     return list.map((e) => Pokemon.fromMap(e)).toList();
   }
 
-  Future<Map<String, dynamic>> resultado(String id) async{
+
+  Future<List<Pokemon>> resultado(String id) async{
     final Dio dio = Dio();
-    final response = await dio.get('https://raw.githubusercontent.com/Biuni/PokemonGO-Pokedex/master/pokedex.json?search=$id');
+    final response = await dio.get('https://raw.githubusercontent.com/Biuni/PokemonGO-Pokedex/master/pokedex.json?search=$query');
     final json = jsonDecode(response.data) as Map<String, dynamic>;
     final list = json['pokemon'] as List<dynamic>;
 
-    return jsonDecode(response.data);
+    return list.map((e) => Pokemon.fromMap(e)).toList();
+
   }
 }
